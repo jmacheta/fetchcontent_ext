@@ -56,7 +56,7 @@ endmacro ()
 
 function (FetchContentExt_DeclareGithub name repository)
   set(options NO_TOKEN)
-  set(single_value GITHUB_REPOSITORY GITHUB_TAG GITHUB_ASSET GITHUB_TOKEN)
+  set(single_value GITHUB_REPOSITORY GITHUB_TAG GITHUB_ASSET GITHUB_TOKEN DOWNLOAD_NAME)
   set(multi_value)
 
   cmake_parse_arguments(arg "${options}" "${single_value}" "${multi_value}" ${ARGN})
@@ -219,6 +219,13 @@ function (FetchContentExt_DeclareGithub name repository)
   endif ()
 
   message(VERBOSE "Asset URL: ${asset_url}")
+
+  if (NOT arg_DOWNLOAD_NAME)
+    set(asset_name ${name})
+  else ()
+    message(VERBOSE "Using provided download name - ${arg_DOWNLOAD_NAME}")
+    set(asset_name ${arg_DOWNLOAD_NAME})
+  endif ()
 
   FetchContent_Declare(
     ${name} HTTP_HEADER "${asset_type_header}" "${github_auth_header}" URL ${asset_url}
