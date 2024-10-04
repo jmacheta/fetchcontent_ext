@@ -220,9 +220,7 @@ function (FetchContentExt_DeclareGithub name repository)
 
   message(VERBOSE "Asset URL: ${asset_url}")
 
-  if (NOT arg_DOWNLOAD_NAME)
-    set(asset_name ${name})
-  else ()
+  if (arg_DOWNLOAD_NAME)
     message(VERBOSE "Using provided download name - ${arg_DOWNLOAD_NAME}")
     set(asset_name ${arg_DOWNLOAD_NAME})
   endif ()
