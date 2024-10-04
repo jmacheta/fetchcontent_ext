@@ -17,5 +17,19 @@
     "literal_comment_pattern": null,
     "fence_pattern": "^\\s*([`~]{3}[`~]*)(.*)$",
     "ruler_pattern": "^\\s*[^\\w\\s]{3}.*[^\\w\\s]{3}$",
-    "enable_markup": true
+    "enable_markup": true,
+    "additional_commands": [
+        "FetchContent_DeclareGH": {
+            "pargs: 1""flags": [
+                "TARBALL",
+                "ZIPBALL"
+            ],
+            "kwargs": {
+                "REPOSITORY": "*",
+                "RELEASE_TAG": "*",
+                "TOKEN": "*",
+                "ASSET_NAME": "*"
+            }
+        }
+    ]
 }
