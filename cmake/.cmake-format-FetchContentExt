@@ -4,8 +4,6 @@ parse:
       spelling: FetchContentExt_Declare
       pargs: 1
       flags:
-        TARBALL
-        ZIPBALL
         NO_TOKEN
       kwargs:
         GITHUB_REPOSITORY: 1
