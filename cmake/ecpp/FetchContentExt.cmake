@@ -70,6 +70,17 @@ function (FetchContentExt_DeclareGithub name repository)
   message(DEBUG "Release Info file: ${release_info_filepath}")
 
   if (NOT IS_READABLE ${release_info_filepath})
+    set(fetch_release_info TRUE)
+  else ()
+    file(SIZE ${release_info_filepath} release_info_size)
+    if (release_info_size EQUAL 0)
+      message(VERBOSE "Release info file is empty. Refetching")
+      set(fetch_release_info TRUE)
+
+    endif ()
+  endif ()
+
+  if (fetch_release_info)
     message(VERBOSE "Fetching release info for ${repository} ${github_tag}")
     if ("${github_tag}" STREQUAL "latest")
       set(tag_string "latest")
@@ -164,13 +175,16 @@ function (FetchContentExt_DeclareGithub name repository)
       string(JSON asset GET ${json_assets} "${index}")
       string(JSON asset_name GET "${asset}" "name")
       string(JSON asset_url GET "${asset}" "url")
+
       if (${asset_name} MATCHES ${github_asset})
+        message(DEBUG "match: ${asset_name} - ${asset_url}")
+
         list(APPEND matching_asset_name ${asset_name})
         list(APPEND matching_asset_url ${asset_url})
-        message(DEBUG "match: ${asset_name} - ${asset_url}")
       else ()
         message(DEBUG "no match: ${asset_name} - ${asset_url}")
       endif ()
+
     endforeach ()
 
     list(LENGTH matching_asset_name matching_asset_count)
@@ -197,8 +211,10 @@ function (FetchContentExt_DeclareGithub name repository)
       list(GET matching_asset_name ${asset_index} matching_asset_name)
       list(GET matching_asset_url ${asset_index} matching_asset_url)
 
-      set(asset_url ${matching_asset_url})
     endif ()
+
+    set(asset_url ${matching_asset_url})
+
   endif ()
 
   message(VERBOSE "Asset URL: ${asset_url}")
