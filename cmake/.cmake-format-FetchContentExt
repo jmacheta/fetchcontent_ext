@@ -1,0 +1,22 @@
+parse:
+  additional_commands:
+    fetchcontentext_declare:
+      spelling: FetchContentExt_Declare
+      pargs: 1
+      flags:
+        TARBALL
+        ZIPBALL
+        NO_TOKEN
+      kwargs:
+        GITHUB_REPOSITORY: 1
+        GITHUB_TAG: 1
+        GITHUB_TOKEN: 1
+        GITHUB_ASSET: 1
+
+    fetchcontentext_declaregithub:
+      spelling: FetchContentExt_DeclareGithub
+      pargs: 2
+      
+        
+    _fetchcontentext_declaregithubvalidate:
+      spelling: _FetchContentExt_DeclareGithubValidate
