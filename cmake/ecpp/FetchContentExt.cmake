@@ -197,7 +197,7 @@ function (FetchContentExt_DeclareGithub name repository)
       list(GET matching_asset_name ${asset_index} matching_asset_name)
       list(GET matching_asset_url ${asset_index} matching_asset_url)
 
-      set(ASSET_URL ${matching_asset_url})
+      set(asset_url ${matching_asset_url})
     endif ()
   endif ()
 
