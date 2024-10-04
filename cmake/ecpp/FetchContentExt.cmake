@@ -147,7 +147,7 @@ function (FetchContentExt_DeclareGithub name repository)
     message(VERBOSE "Found zipball URL: ${asset_url}")
 
   else ()
-
+    set(asset_type_header "Accept: application/octet-stream")
     string(
       JSON
       json_assets
