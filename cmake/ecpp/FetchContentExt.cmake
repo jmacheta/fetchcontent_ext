@@ -2,8 +2,10 @@ cmake_minimum_required(VERSION 3.25)
 
 include(FetchContent)
 
+# FetchContentExt_DeclareGithub
+#
+# Validates user-provided arguments and sets necessary defaults for github fetch content
 macro (_FetchContentExt_DeclareGithubValidate)
-
   if (NOT arg_GITHUB_TAG)
     message(VERBOSE "No tag provided. Assuming to latest")
     set(arg_GITHUB_TAG latest)
@@ -50,12 +52,16 @@ macro (_FetchContentExt_DeclareGithubValidate)
                       "Be aware that Github limits unauthenticated requests to 60 per hour."
       )
     endif ()
-
   endif ()
 endmacro ()
 
+# Declares a FetchContent target for a github repository asset
+#
+# FetchContentExt_DeclareGithub(name repository [GITHUB_REPOSITORY <repository>] [GITHUB_TAG <tag>]
+# [GITHUB_ASSET <asset>] [GITHUB_TOKEN <token>] [NO_TOKEN] [ALWAYS_REFETCH] )
+#
 function (FetchContentExt_DeclareGithub name repository)
-  set(options NO_TOKEN)
+  set(options NO_TOKEN ALWAYS_REFETCH)
   set(single_value GITHUB_REPOSITORY GITHUB_TAG GITHUB_ASSET GITHUB_TOKEN DOWNLOAD_NAME)
   set(multi_value)
 
@@ -69,26 +75,33 @@ function (FetchContentExt_DeclareGithub name repository)
   set(release_info_filepath ${FetchContentExt_BINARY_DIR}/info/${release_info_filename})
   message(DEBUG "Release Info file: ${release_info_filepath}")
 
-  if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.29.0")
-    if (NOT IS_READABLE ${release_info_filepath})
-      set(fetch_release_info TRUE)
-    endif ()
+  if (arg_ALWAYS_FETCH_INFO)
+    message(VERBOSE "Forcing refetch of release info")
+    set(fetch_release_info TRUE)
   else ()
-    if (NOT EXISTS ${release_info_filepath})
-      set(fetch_release_info TRUE)
+    if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.29.0")
+      if (NOT IS_READABLE ${release_info_filepath})
+        set(fetch_release_info TRUE)
+      endif ()
+    else ()
+      if (NOT EXISTS ${release_info_filepath})
+        set(fetch_release_info TRUE)
+      endif ()
+    endif ()
+
+    if (NOT fetch_release_info)
+      file(SIZE ${release_info_filepath} release_info_size)
+      if (release_info_size EQUAL 0)
+        message(VERBOSE "Release info file is empty. Refetching")
+        set(fetch_release_info TRUE)
+
+      endif ()
     endif ()
   endif ()
 
-  if(NOT fetch_release_info)
-    file(SIZE ${release_info_filepath} release_info_size)
-    if (release_info_size EQUAL 0)
-      message(VERBOSE "Release info file is empty. Refetching")
-      set(fetch_release_info TRUE)
-
-    endif ()
-  endif ()
-
-  if (fetch_release_info)
+  if (NOT fetch_release_info)
+    message(DEBUG "Fetching release info for ${repository} ${github_tag} is not required")
+  else ()
     message(VERBOSE "Fetching release info for ${repository} ${github_tag}")
     if ("${github_tag}" STREQUAL "latest")
       set(tag_string "latest")
@@ -132,9 +145,6 @@ function (FetchContentExt_DeclareGithub name repository)
     if (NOT asset_url)
       message(FATAL_ERROR "No tarball URL found in release info")
     endif ()
-
-    message(VERBOSE "Found tarball URL: ${asset_url}")
-
   elseif (github_asset STREQUAL "zipball")
     set(asset_type_header "Accept: application/vnd.github+json")
     set(asset_name "sources.zip")
@@ -152,9 +162,6 @@ function (FetchContentExt_DeclareGithub name repository)
     if (NOT asset_url)
       message(FATAL_ERROR "No zipball URL found in release info")
     endif ()
-
-    message(VERBOSE "Found zipball URL: ${asset_url}")
-
   else ()
     set(asset_type_header "Accept: application/octet-stream")
     string(
@@ -241,6 +248,12 @@ function (FetchContentExt_DeclareGithub name repository)
 
 endfunction ()
 
+# Declares a FetchContent target for a repository asset
+#
+# FetchContentExt_DeclareGithub(name [GITHUB_REPOSITORY <repository>] [options]
+#
+# Currently supporting only Github assets. For options, refer to FetchContentExt_DeclareGithub
+#
 function (FetchContentExt_Declare name)
   set(options)
   set(single_value GITHUB_REPOSITORY)

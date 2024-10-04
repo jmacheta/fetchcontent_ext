@@ -3,8 +3,7 @@ parse:
     fetchcontentext_declare:
       spelling: FetchContentExt_Declare
       pargs: 1
-      flags:
-        NO_TOKEN
+      flags: NO_TOKEN ALWAYS_FETCH_INFO
       kwargs:
         GITHUB_REPOSITORY: 1
         GITHUB_TAG: 1
@@ -14,7 +13,7 @@ parse:
     fetchcontentext_declaregithub:
       spelling: FetchContentExt_DeclareGithub
       pargs: 2
-      
-        
+
+
     _fetchcontentext_declaregithubvalidate:
       spelling: _FetchContentExt_DeclareGithubValidate
