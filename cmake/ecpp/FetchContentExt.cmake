@@ -108,6 +108,7 @@ function (FetchContentExt_DeclareGithub name repository)
 
   if (github_asset STREQUAL "tarball")
     set(asset_type_header "Accept: application/vnd.github+json")
+    set(asset_name "sources.tar.gz")
 
     message(DEBUG "Looking for tarball URL")
     string(
@@ -128,7 +129,7 @@ function (FetchContentExt_DeclareGithub name repository)
 
   elseif (github_asset STREQUAL "zipball")
     set(asset_type_header "Accept: application/vnd.github+json")
-
+    set(asset_name "sources.zip")
     message(DEBUG "Looking for zipball URL")
     string(
       JSON
@@ -162,27 +163,27 @@ function (FetchContentExt_DeclareGithub name repository)
       message(FATAL_ERROR "No assets found in release info")
     endif ()
 
-    string(JSON asset_count LENGTH ${json_assets})
-    message(DEBUG "Found ${asset_count} assets in ${repository} ${github_tag}")
+    string(JSON json_assets_count LENGTH ${json_assets})
+    message(DEBUG "Found ${json_assets_count} assets in ${repository} ${github_tag}")
 
-    if (asset_count LESS_EQUAL 0)
+    if (json_assets_count LESS_EQUAL 0)
       message(FATAL_ERROR "No assets found in release info")
     endif ()
 
-    math(EXPR asset_count "${asset_count} - 1")
+    math(EXPR json_assets_count "${json_assets_count} - 1")
 
-    foreach (index RANGE ${asset_count})
+    foreach (index RANGE ${json_assets_count})
       string(JSON asset GET ${json_assets} "${index}")
-      string(JSON asset_name GET "${asset}" "name")
-      string(JSON asset_url GET "${asset}" "url")
+      string(JSON current_asset_name GET "${asset}" "name")
+      string(JSON current_asset_url GET "${asset}" "url")
 
-      if (${asset_name} MATCHES ${github_asset})
-        message(DEBUG "match: ${asset_name} - ${asset_url}")
+      if (${current_asset_name} MATCHES ${github_asset})
+        message(DEBUG "match: ${current_asset_name} - ${current_asset_url}")
 
-        list(APPEND matching_asset_name ${asset_name})
-        list(APPEND matching_asset_url ${asset_url})
+        list(APPEND matching_asset_name ${current_asset_name})
+        list(APPEND matching_asset_url ${current_asset_url})
       else ()
-        message(DEBUG "no match: ${asset_name} - ${asset_url}")
+        message(DEBUG "no match: ${current_asset_name} - ${current_asset_url}")
       endif ()
 
     endforeach ()
@@ -210,9 +211,9 @@ function (FetchContentExt_DeclareGithub name repository)
       message(DEBUG "Exact match found at index ${asset_index}")
       list(GET matching_asset_name ${asset_index} matching_asset_name)
       list(GET matching_asset_url ${asset_index} matching_asset_url)
-
     endif ()
 
+    set(asset_name ${matching_asset_name})
     set(asset_url ${matching_asset_url})
 
   endif ()
@@ -220,8 +221,9 @@ function (FetchContentExt_DeclareGithub name repository)
   message(VERBOSE "Asset URL: ${asset_url}")
 
   FetchContent_Declare(
-    ${name} HTTP_HEADER "${asset_type_header}" "${github_auth_header}"
-    URL ${asset_url} ${arg_UNPARSED_ARGUMENTS}
+    ${name} HTTP_HEADER "${asset_type_header}" "${github_auth_header}" URL ${asset_url}
+                                                                           ${arg_UNPARSED_ARGUMENTS}
+    DOWNLOAD_NAME ${asset_name}
   )
 
 endfunction ()
