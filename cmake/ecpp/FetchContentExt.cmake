@@ -242,8 +242,7 @@ function (FetchContentExt_DeclareGithub name repository)
 
   FetchContent_Declare(
     ${name} HTTP_HEADER "${asset_type_header}" "${github_auth_header}" URL ${asset_url}
-                                                                           ${arg_UNPARSED_ARGUMENTS}
-    DOWNLOAD_NAME ${asset_name}
+    DOWNLOAD_NAME ${asset_name} ${arg_UNPARSED_ARGUMENTS}
   )
 
 endfunction ()
