@@ -6,46 +6,55 @@ include(FetchContent)
 #
 # Validates user-provided arguments and sets necessary defaults for github fetch content
 macro (_FetchContentExt_DeclareGithubValidate)
-  if (NOT arg_GITHUB_TAG)
+  string(REGEX REPLACE "^https://github.com/([^/]*)/(.*)$" "\\1;\\2" organization_repo ${url})
+  list(GET organization_repo 0 organization)
+  list(GET organization_repo 1 repository)
+  unset(organization_repo)
+  message(VERBOSE "organization: ${organization}, repository: ${repository}")
+
+  if (NOT arg_GIT_TAG)
     message(VERBOSE "No tag provided. Assuming to latest")
-    set(arg_GITHUB_TAG latest)
+    set(arg_GIT_TAG latest)
   endif ()
 
-  set(github_tag "${arg_GITHUB_TAG}")
-  message(DEBUG "github_tag: ${github_tag}")
+  set(git_tag "${arg_GIT_TAG}")
+  message(DEBUG "git_tag: ${git_tag}")
 
-  if (NOT arg_GITHUB_ASSET)
+  if (NOT arg_ASSET)
     message(VERBOSE "No asset name provided. Assuming tarball")
-    set(arg_GITHUB_ASSET tarball)
+    set(arg_ASSET tarball)
   endif ()
 
-  if (${arg_GITHUB_ASSET} STREQUAL "TARBALL")
-    set(github_asset tarball)
-  elseif (${arg_GITHUB_ASSET} STREQUAL "ZIPBALL")
-    set(github_asset zipball)
+  if (${arg_ASSET} STREQUAL "TARBALL")
+    set(asset tarball)
+  elseif (${arg_ASSET} STREQUAL "ZIPBALL")
+    set(asset zipball)
   else ()
-    set(github_asset "${arg_GITHUB_ASSET}")
+    set(asset "${arg_ASSET}")
   endif ()
 
-  message(DEBUG "github_asset: ${github_asset}")
+  message(DEBUG "asset: ${asset}")
 
-  if (NOT arg_GITHUB_TOKEN)
-    message(VERBOSE "No GITHUB_TOKEN. Checking Environment Variables")
+  if (NOT arg_TOKEN)
+    message(DEBUG "No TOKEN. Checking Environment Variables")
     if (DEFINED ENV{GITHUB_TOKEN})
-      set(arg_GITHUB_TOKEN $ENV{GITHUB_TOKEN})
+      message(DEBUG "Enviroment variable GITHUB_TOKEN found")
+      set(arg_TOKEN $ENV{GITHUB_TOKEN})
     elseif (DEFINED ENV{GH_TOKEN})
-      set(arg_GITHUB_TOKEN $ENV{GH_TOKEN})
+      message(DEBUG "Enviroment variable GH_TOKEN found")
+      set(arg_TOKEN $ENV{GH_TOKEN})
     elseif (DEFINED ENV{GITHUB_PAT})
-      set(arg_GITHUB_TOKEN $ENV{GITHUB_PAT})
+      message(DEBUG "Enviroment variable GITHUB_PAT found")
+      set(arg_TOKEN $ENV{GITHUB_PAT})
     endif ()
   endif ()
 
-  if (arg_GITHUB_TOKEN)
-    message(DEBUG "GITHUB_TOKEN found")
-    set(github_auth_header "Authorization: Bearer ${arg_GITHUB_TOKEN}")
+  if (arg_TOKEN)
+    message(DEBUG "TOKEN found")
+    set(github_auth_header "Authorization: Bearer ${arg_TOKEN}")
   else ()
     set(github_auth_header "")
-    message(DEBUG "GITHUB_TOKEN not found")
+    message(DEBUG "TOKEN not found")
 
     if (NOT arg_NO_TOKEN)
       message(WARNING "No token found. If this is intentional, consider adding NO_TOKEN option."
@@ -57,60 +66,57 @@ endmacro ()
 
 # Declares a FetchContent target for a github repository asset
 #
-# FetchContentExt_DeclareGithub(name repository [GITHUB_REPOSITORY <repository>] [GITHUB_TAG <tag>]
-# [GITHUB_ASSET <asset>] [GITHUB_TOKEN <token>] [NO_TOKEN] [ALWAYS_REFETCH] )
+# FetchContentExt_DeclareGithub(name repository [GIT_TAG <tag>] [ASSET <asset>] [TOKEN <token>]
+# [NO_TOKEN] [FETCH_INFO_ONCE] )
 #
-function (FetchContentExt_DeclareGithub name repository)
-  set(options NO_TOKEN ALWAYS_REFETCH)
-  set(single_value GITHUB_REPOSITORY GITHUB_TAG GITHUB_ASSET GITHUB_TOKEN DOWNLOAD_NAME)
+function (FetchContentExt_DeclareGithub name url)
+  set(options NO_TOKEN FETCH_INFO_ONCE)
+  set(single_value GIT_TAG ASSET TOKEN DOWNLOAD_NAME)
   set(multi_value)
 
   cmake_parse_arguments(arg "${options}" "${single_value}" "${multi_value}" ${ARGN})
 
   _FetchContentExt_DeclareGithubValidate()
 
-  string(CONCAT release_info_filename ${repository} "_" ${github_tag} ".json")
-  string(REGEX REPLACE "[\\/]" "_" release_info_filename ${release_info_filename})
+  string(
+    CONCAT release_info_filename
+           ${organization}
+           "_"
+           ${repository}
+           "_"
+           ${git_tag}
+           ".json"
+  )
 
   set(release_info_filepath ${FetchContentExt_BINARY_DIR}/info/${release_info_filename})
   message(DEBUG "Release Info file: ${release_info_filepath}")
 
-  if (arg_ALWAYS_FETCH_INFO)
-    message(VERBOSE "Forcing refetch of release info")
-    set(fetch_release_info TRUE)
+  if (NOT EXISTS ${release_info_filepath})
+    set(release_info_size 0)
   else ()
-    if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.29.0")
-      if (NOT IS_READABLE ${release_info_filepath})
-        set(fetch_release_info TRUE)
-      endif ()
-    else ()
-      if (NOT EXISTS ${release_info_filepath})
-        set(fetch_release_info TRUE)
-      endif ()
-    endif ()
-
-    if (NOT fetch_release_info)
-      file(SIZE ${release_info_filepath} release_info_size)
-      if (release_info_size EQUAL 0)
-        message(VERBOSE "Release info file is empty. Refetching")
-        set(fetch_release_info TRUE)
-
-      endif ()
-    endif ()
+    file(SIZE ${release_info_filepath} release_info_size)
+  endif ()
+  if (release_info_size EQUAL 0)
+    message(DEBUG "No cached release info found")
+    set(fetch_release_info TRUE)
+  elseif (arg_FETCH_INFO_ONCE)
+    message(DEBUG "FETCH_INFO_ONCE provided. Not fetching info again")
   endif ()
 
   if (NOT fetch_release_info)
-    message(DEBUG "Fetching release info for ${repository} ${github_tag} is not required")
+    message(DEBUG
+            "Fetching release info for ${organization}/${repository}@${git_tag} is not required"
+    )
   else ()
-    message(VERBOSE "Fetching release info for ${repository} ${github_tag}")
-    if ("${github_tag}" STREQUAL "latest")
+    message(VERBOSE "Fetching release info for ${organization}/${repository}@${git_tag}")
+    if ("${git_tag}" STREQUAL "latest")
       set(tag_string "latest")
     else ()
-      set(tag_string "tags/${github_tag}")
+      set(tag_string "tags/${git_tag}")
     endif ()
 
     file(
-      DOWNLOAD https://api.github.com/repos/${repository}/releases/${tag_string}
+      DOWNLOAD https://api.github.com/repos/${organization}/${repository}/releases/${tag_string}
       ${release_info_filepath}
       HTTPHEADER "Accept: application/vnd.github+json"
       HTTPHEADER "${github_auth_header}"
@@ -119,15 +125,19 @@ function (FetchContentExt_DeclareGithub name repository)
     )
 
     list(GET release_info_fetch_status 0 release_info_fetch_error_code)
+    list(GET release_info_fetch_status 1 release_info_fetch_error_msg)
     if (NOT (release_info_fetch_error_code EQUAL 0))
-      message(FATAL_ERROR "Failed to fetch release info: ${release_info_fetch_status}")
+      message(
+        FATAL_ERROR
+          "Fetching release info for ${organization}/${repository}@${git_tag} failed with code ${release_info_fetch_error_code}: ${release_info_fetch_error_msg}"
+      )
     endif ()
 
   endif ()
 
   file(READ ${release_info_filepath} release_info)
 
-  if (github_asset STREQUAL "tarball")
+  if (asset STREQUAL "tarball")
     set(asset_type_header "Accept: application/vnd.github+json")
     set(asset_name "sources.tar.gz")
 
@@ -145,7 +155,7 @@ function (FetchContentExt_DeclareGithub name repository)
     if (NOT asset_url)
       message(FATAL_ERROR "No tarball URL found in release info")
     endif ()
-  elseif (github_asset STREQUAL "zipball")
+  elseif (asset STREQUAL "zipball")
     set(asset_type_header "Accept: application/vnd.github+json")
     set(asset_name "sources.zip")
     message(DEBUG "Looking for zipball URL")
@@ -188,11 +198,11 @@ function (FetchContentExt_DeclareGithub name repository)
     math(EXPR json_assets_count "${json_assets_count} - 1")
 
     foreach (index RANGE ${json_assets_count})
-      string(JSON asset GET ${json_assets} "${index}")
-      string(JSON current_asset_name GET "${asset}" "name")
-      string(JSON current_asset_url GET "${asset}" "url")
+      string(JSON current_asset GET ${json_assets} "${index}")
+      string(JSON current_asset_name GET "${current_asset}" "name")
+      string(JSON current_asset_url GET "${current_asset}" "url")
 
-      if (${current_asset_name} MATCHES ${github_asset})
+      if (${current_asset_name} MATCHES ${asset})
         message(DEBUG "match: ${current_asset_name} - ${current_asset_url}")
 
         list(APPEND matching_asset_name ${current_asset_name})
@@ -213,7 +223,7 @@ function (FetchContentExt_DeclareGithub name repository)
     if (matching_asset_count GREATER 1)
       message(DEBUG "Multiple matching assets found. Looking for exact match")
 
-      list(FIND matching_asset_name "${github_asset}" asset_index)
+      list(FIND matching_asset_name "${asset}" asset_index)
       if (asset_index EQUAL -1)
         list(TRANSFORM matching_asset_name PREPEND "\n- ")
         list(JOIN matching_asset_name "," multiple_assets_error_msg)
@@ -247,23 +257,56 @@ function (FetchContentExt_DeclareGithub name repository)
 
 endfunction ()
 
+# Detects the repository provider based on the user-provided arguments:
+#
+# Checks using GITHUB_REPOSITORY, GIT_REPOSITORY, and URL If succesful, populates the url and
+# repo_type variables
+#
+macro (_FetchContentExt_DetectType)
+  if (arg_GITHUB_REPOSITORY)
+    set(url "https://github.com/${arg_GITHUB_REPOSITORY}")
+    set(repo_type "github")
+
+  elseif (arg_GIT_REPOSITORY)
+    if (arg_GIT_REPOSITORY MATCHES "^.*github.com")
+      set(repo_type "github")
+      string(REGEX REPLACE "^.*github.com[:/](.*).git$" "https://github.com/\\1" url
+                           "${arg_GIT_REPOSITORY}"
+      )
+
+    endif ()
+  elseif (arg_URL)
+    if (arg_URL MATCHES "^.*//github.com")
+      set(repo_type "github")
+      set(url "${arg_URL}")
+    endif ()
+  endif ()
+
+  message(VERBOSE "Repository type: '${repo_type}', url: ${url}")
+endmacro ()
+
 # Declares a FetchContent target for a repository asset
 #
-# FetchContentExt_DeclareGithub(name [GITHUB_REPOSITORY <repository>] [options]
+# FetchContentExt_DeclareGithub(name [GITHUB_REPOSITORY <organization/repo>] [GIT_REPOSITORY <url>]
+# [URL <url>] [options]
 #
 # Currently supporting only Github assets. For options, refer to FetchContentExt_DeclareGithub
 #
 function (FetchContentExt_Declare name)
   set(options)
-  set(single_value GITHUB_REPOSITORY)
-  set(multi_value)
+  set(single_value GITHUB_REPOSITORY GIT_REPOSITORY URL)
+  message(VERBOSE "FetchContentExt_Declare parsing target info")
+  list(APPEND CMAKE_MESSAGE_INDENT "  ")
 
   cmake_parse_arguments(arg "${options}" "${single_value}" "${multi_value}" ${ARGN})
+  set(multi_value)
+  _FetchContentExt_DetectType()
 
-  if (arg_GITHUB_REPOSITORY)
-    FetchContentExt_DeclareGithub(${name} ${arg_GITHUB_REPOSITORY} ${arg_UNPARSED_ARGUMENTS})
+  if (repo_type STREQUAL "github")
+    FetchContentExt_DeclareGithub(${name} ${url} ${arg_UNPARSED_ARGUMENTS})
   else ()
     message(FATAL_ERROR "No supported downloadable target")
   endif ()
 
+  list(POP_BACK CMAKE_MESSAGE_INDENT)
 endfunction ()

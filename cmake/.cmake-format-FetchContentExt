@@ -17,3 +17,6 @@ parse:
 
     _fetchcontentext_declaregithubvalidate:
       spelling: _FetchContentExt_DeclareGithubValidate
+
+    _fetchcontentext_detecttype:
+      spelling: _FetchContentExt_DetectType
