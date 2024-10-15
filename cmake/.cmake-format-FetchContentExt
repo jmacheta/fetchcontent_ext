@@ -14,9 +14,27 @@ parse:
       spelling: FetchContentExt_DeclareGithub
       pargs: 2
 
-
-    _fetchcontentext_declaregithubvalidate:
-      spelling: _FetchContentExt_DeclareGithubValidate
+    _fetchcontentext_githubvalidate:
+      spelling: _FetchContentExt_GithubValidate
 
     _fetchcontentext_detecttype:
       spelling: _FetchContentExt_DetectType
+
+    _fetchcontentext_githubgetreleaseinfo:
+      spelling: _FetchContentExt_GithubGetReleaseinfo
+      pargs: 4
+
+    _fetchcontentext_githubgettaginfo:
+      spelling: _FetchContentExt_GithubGetTaginfo
+      pargs: 4
+
+    _fetchcontentext_githubfindjsonarray:
+      spelling: _FetchContentExt_GithubFindJSONArray
+      pargs: 4
+
+      string:
+      kwargs:
+        JSON: 1
+        ERROR_VARIABLE: 1
+        GET: 1
+        LENGTH: 1
